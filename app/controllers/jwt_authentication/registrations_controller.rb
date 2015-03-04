@@ -7,7 +7,7 @@ class JwtAuthentication::RegistrationsController < Devise::RegistrationsControll
     yield resource if block_given?
     if resource_saved
       if resource.active_for_authentication?
-        sign_up(resource_name, resource)
+        sign_in(resource_name, resource, store: false)
         render json: {
             auth_token: resource.jwt_token,
             resource_name => resource

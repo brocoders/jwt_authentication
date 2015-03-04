@@ -2,7 +2,7 @@ class JwtAuthentication::SessionsController < Devise::SessionsController
   include JwtAuthentication::Concerns::JwtControllerHelpers
 
   def create
-    self.resource = warden.authenticate!({ scope: resource_name, recall: "#{controller_path}#new" })
+    self.resource = warden.authenticate!({ scope: resource_name, recall: "#{controller_path}#new", store: false })
     sign_in(resource_name, resource)
     yield resource if block_given?
     render json: { auth_token: resource.jwt_token(sign_in_params[:remember_me]) }
