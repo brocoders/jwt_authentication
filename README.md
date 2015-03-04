@@ -1,23 +1,37 @@
 JWT Authentication
 ===========================
 
-This is mix of Simple Token Authentication and JWT.
-
   [devise]: https://github.com/plataformatec/devise
   [jwt-gem]: https://github.com/progrium/ruby-jwt
+  [sta-gem]: https://github.com/gonzalo-bulnes/simple_token_authentication
+
+This is mix of [Simple Token Authentication][sta-gem] and [JWT][jwt-gem], based on [Devise][devise].
+
+
+
+* [Installation](#installation)
+* [Using](#using)
+* [Configuring](#configuring)
+* [Authentication](#authentication)
+* [Devise](#devise)
 
 Installation
-------------
+-----
 
-Install [Devise][devise] with any modules you want, then add the gem to your `Gemfile`:
+Add the gem to your `Gemfile`:
 
 ```ruby
 # Gemfile
 
-gem 'jwt_authentication'
+gem 'jwt_authentication', github: 'Rezonans/jwt_authentication'
 ```
 
-### Make models token authenticatable
+Using
+-----
+
+### Models
+
+Make models token authenticatable
 
 #### ActiveRecord
 
@@ -43,47 +57,85 @@ class User < ActiveRecord::Base
 end
 ```
 
+Method `acts_as_jwt_authenticatable` extends Model with several methods: `:jwt_token`, `:generate_authentication_token!`
+and some others. Obviously, `jwt_token` returns token for current record and `:generate_authentication_token!` updates record with new authentication_token.
+
 If the model or models you chose have no `:authentication_token` attribute, add them one (with an index):
 
 ```bash
 rails g jwt_authentication MODEL
 ```
 This will add 'acts_as_jwt_authenticatable' to specified MODEL. Also, this will generate migration for adding 'authentication_token' to MODEL.
-To skip generating migration, add '-m' parameter: rails g jwt_authentication User -m
+To skip generating migration, add '-m' parameter: rails g jwt_authentication User -m.
+Migration looks like:
+```ruby
+  def change
+    add_column :users, :authentication_token, :string
+    add_index  :users, :authentication_token
+  end
+```
 
 
 ### Allow controllers to handle jwt authentication
 
-Finally define which controllers will handle jwt authentication (typ. `ApplicationController`) for which _jwt authenticatable_ models:
+Define controllers, which will handle jwt authentication (typ. `HomeController`) for which _jwt authenticatable_ models:
 
  ```ruby
- # app/controllers/application_controller.rb
+ # app/controllers/home_controller.rb
 
- class ApplicationController < ActionController::Base # or ActionController::API
+ class HomeController < ActionController::Base # or ActionController::API
    # ...
 
    acts_as_jwt_authentication_handler
    # Note: you can specify several parameters for handling authentication for this controller:  
-   #   :model (which "acts as jwt authenticatable") for authenticating
-   # 
-   #   :key_field. Name of the field in _payload_ of decoded jwt. Entity will be searched in database by this field.
-   #
-   #   :before_filter. Should the before_filter (with selected authenticate method) be injected in controller.   
-   #
-   #   :fallback. What to do, if jwt_authentication falls. 
-   #
-   #   :sign_in. How to authenticate entity in controller.
+   #   :models (which "acts as jwt authenticatable") for authenticating, hash, that specifies models
+   #            and those authentication parameters :header_name, :param_name, :sign_in
    #
    # example:
-   #  acts_as_jwt_authentication_handler model: :terminal, before_filter: true, fallback: :none, key_field: :id, sign_in: :simplified
+   #  acts_as_jwt_authentication_handler models: {terminal: {header_name: 'terminal_auth_token',
+   #                                                         param_name: 'X-Auth-Terminal-Token',
+   #                                                         sign_in: :simplified}
    # 
    # ...
  end
  ```
-See detailed parameters description in [Configuration](#configuration)
 
-Configuration
--------------
+Method `acts_as_jwt_authentication_handler` extends controller with methods: `:jwt_authenticate_user`, `::jwt_authenticate_user!` and some others.
+Instead of _user_ there will be specified model names, pair of methods for each model.
+
+See detailed parameters and methods description in [Authentication](#authentication)
+
+Atfer controller was extended with jwt_authentication helpers, you may authenticate entity in actions or in before filter:
+
+```ruby
+class TerminalsController < ActionController
+  acts_as_jwt_authentication_handler models: {terminal: {sign_in: :simlified}}
+  before_filter :jwt_authenticate_terminal!
+
+  def show
+    @terminal
+  end
+
+end
+
+```
+
+### Routing
+
+Define devise routes for creating devise mapping.
+
+```ruby
+# config/routes.rb
+
+...
+devise_for :users, module: :jwt_authentication
+...
+
+```
+Devise routing is necessary, because it creates devise mappings.
+
+Configuring
+------
 
 Some aspects of the behavior of _Jwt Authentication_ can be customized with an initializer.
 Below is an example with reasonable defaults:
@@ -93,30 +145,16 @@ Below is an example with reasonable defaults:
 
 JwtAuthentication.configure do |config|
   #
-  # # Configure model, that will be default for `acts_as_jwt_authentication_handler` calling.
+  # # Configure models, that will be default for `acts_as_jwt_authentication_handler` calling.
   # # Note: specified model should have `authentication_token` attribute (Model should "act as jwt authenticatable")
-  # config.model = :user
-  #
-  # # Configure default fallback, that will be default for `acts_as_jwt_authentication_handler` calling.
-  # # Possible values: :none, :devise, :response, :error  
-  # config.fallback = :none
-  #
-  # # Configure default sign_in authentication reaction, that will be default for `acts_as_jwt_authentication_handler` calling.
-  # # Possible values: :devise, :devise_session, :simplified
-  # config.sign_in = :devise
-  #
-  # # Configure default before_filter injection mark, that will be default for `acts_as_jwt_authentication_handler` calling.
-  # # True - inject, false - do not inject.
-  # config.before_filter = true
-  #
-  # # Configure default key_field, that will be default for `acts_as_jwt_authentication_handler` calling.
-  # # Value of this filed will be searched in payload if received jwt, entity fill by searched by this field :
-  # #  token: { email: test@mail.com }           # decoded jwt
-  # #  `model.where(key_field => key).first`     # entity search
-  # config.key_field = :email
-  #
-  # # Configure default header and parameter names for searching jwt in request.
-  # config.header_names = { user: { jwt_header_name: 'X-User-JWT', jwt_param_name: 'user_jwt' } }
+  # # header_name - name of header to search auth_token in request
+  # # param_name - name of parameters to search auth_token in request
+  # # sign_in - method to be executed if authentication success, possible values: :devise, :simplified
+  # #           if :devise selected, devises method sign_in() will be called at success authentication,
+  # #           if :simplified selected, instance variable with name of resource will be set (@user or @terminal)
+  # config.models = {user: {header_name: 'X-User-Token',
+  #                         param_name: 'user_token',
+  #                         sign_in: :devise}}
   #
   # # Configure mark of jwt timeout verification
   # config.jwt_timeout_verify = true
@@ -126,102 +164,61 @@ JwtAuthentication.configure do |config|
   #
   # # Configure jwt timeout for simple login (without "remember me)
   # # Devise SessionsController generates jwt according to this parameter
+  # # * This parameter may be overridden in each model:
+  # #    acts_as_jwt_authenticatable jwt_timeout: 10.minutes
   # config.jwt_timeout = 20.minutes
   #
   # # Configure jwt timeout for session login (with "remember me)
   # # Devise SessionsController generates jwt according to this parameter
+  # # * This parameter may be overridden in each model:
+  # #    acts_as_jwt_authenticatable jwt_timeout_remember_me: 1.week
   # config.jwt_timeout_remember_me = 1.month
   #
-  # # Configure list of controller actions not to be authenticated with jwt_authentication
-  # # Example:
-  # #   {'Devise::SessionsController'      => [:create, :destroy],
-  # #    'Devise::RegistrationsController' => [:create],
-  # #    'Devise::PasswordsController'     => [:create, :update],
-  # #    'Devise::ConfirmationsController' => [:create, :show]}
-  # config.jwt_skip_authentication_for = {}
+  # # Configure list of model keys, to be stored in jwt payload.
+  # # Also, record we be searched by this fields at authentication.
+  # # * This parameter may be overridden in each model:
+  # #    acts_as_jwt_authenticatable key_fields: [:email, :id]
+  # config.key_fields = [:email]
   #
 
 end
-
-# # Configure list of Devise Controllers to be overridden. Those controllers will work via JSON.
-# # Note: request should contain 'Accept' header, that has 'application/json' value
-# # Possible controllers list: %i{registrations confirmations passwords sessions}
-# JwtAuthentication.override_devise_controllers [:sessions, :passwords]
-
 ```
-You'll find details for `:fallback` parameters in in [Fallback](#fallback)
-You'll find details for `:sign_in` parameters in in [Sign in](#sign-in) 
 
-Usage
+Authentication
 -----
 
-### Tokens Generation
+As there was mentioned in [Using](#using), method `acts_as_jwt_authentication_handler` add to controller two methods:
+`:jwt_authenticate_user` and `:jwt_authenticate_user!`. Method with bang raises error, if authentication falls,
+method without bang do nothing if authentication falls.
+ Authentication process in primitive simple:
+* Analize request - try to find token in params or header. If token not found, authentication falls.
+* Read payload from jwt
+* Search for entity by field, that payload contains. If entity not found, authentication falls.
+* Decode jwt with entities `authentication_token` (private key, that is stored as entities field).
+     If `jwt_timeout_verify` specified, timeout verification will take place also.
+* If token successfully verified - _sign_in handler_ will be called, otherwise authentication falls.
 
-Assuming `user` is an instance of `User`, which is _jwt authenticatable_: each time `user` will be saved, and `user.authentication_token.blank?` it receives a new and unique authentication token (via `Devise.friendly_token`).
+ `sign_in_handler`. You may specify, what to do at success authentication in `sign_in` parameter in model:
+   ```ruby
+   # config/initializers/jwt_authentication.rb
+   ...
+   config.models = {user: {sign_in: :devise}}
+   ...
+   ```
+ There are 2 variants:
+* `:devise` (default) - `:sign_in` (devise controller method) will be called
+* `:simplified` - create instance variable with resource name (@user, @terminal, etc).
 
-### Authentication Method 1: Query Params
-
-You can authenticate passing the `user_token` params as query params:
-
-```
-GET https://secure.example.com?user_token=eyJ0eXAiOiJKV1QiLCJhbGciOiJ...iGhux7wDwM_QFpU
-```
-
-The _token authentication handler_ (e.g. `ApplicationController`) will perform the user sign in if both are correct.
-
-### Authentication Method 2: Request Headers
-
-You can also use request headers (which may be simpler when authenticating against an API):
-
-```
-X-User-Token eyJ0eXAiOiJKV1QiLCJhbGciOiJ...iGhux7wDwM_QFpU
-```
-
-Authentication process
+Devise
 -----
 
-### Authentication methods
-
-`acts_as_jwt_authentication_handler` method in controller will generate and add 4 auth method for controller. 
-Each of them will try to authenticate entity with. 
-The difference is in then behavior at auth falling: it matches fallback parameter in config:  
-  
-  * `:authenticate_user_by_jwt` - fallback: :`none`
-  * `:authenticate_user_by_jwt!` - fallback: :`error`
-  * `:authenticate_user_by_jwt_and_devise` fallback: :`devise`
-  * `:authenticate_user_by_jwt_with_response` fallback: :`response`
-Instead of user there`ll be name of specified model
-Detailed info about fallback is in [Fallback](#fallback)
-
-If parameter `before_filter` set to true, one of this methods (it depends on `fallback`) will be set as before_filter  
-
-You may set one of this method in any action:
+JwtAuthentication inherits devise controllers: Registrations, Confirmations, Sessions, Passwords.
+So, you can extend this functionality with inheritance or overriding some of them.
+Note, that you need to specify routes to this inherited controllers, like this:
 ```ruby
-  class GroupsController < ApplicationController    
-    def index
-      authenticate_user_by_jwt!
-      render json: current_user.groups
-    end
-  end
+# config/routes.rb
+...
+devise_for :users, module: :jwt_authentication
+...
+
 ```
-
-### Sign in
-Jwt Authentication supports 3 variants of authentication - _:devise_, _:devise_with_session_, _:simplified_
-  * `:devise` _(default)_ standard devise _sign_in_ call with _entity_m, that was authenticated
-  * `:devise_with_session` the same as _:devise_, but with saving devise session
-  * `:simplified` just creates `@user` (or other specified @entity) controller instance variable
-
-### Fallback
-There are 4 variants of fallback - `:none`, `:devise`, `:response`, `:error`
-   * `:none` _(default)_ nothing happens if entity could not be authenticated
-   * `:devise` control is given to devise strategies
-   * `:response` process will be interrupted and 'not authenticated' error is returned in json
-   * `:error` process will be interrupted with NotAuthenticated error throwing
-
-Devise controllers
------
-
-You may override Devise controllers for working via JSON.
-For doing this, uncomment `override_devise_controllers` method in _jwt_authentication.rb_ initializer and specify controllers to be overridden.
-`override_devise_controllers` will create alias method chains for needed actions: create -> create_with_token, create_without_token, etc. 
-Dependently on accept headers in request, actions will be called. IF _json_ was requested, create_with_token will be called, create_without_token otherwise.  
