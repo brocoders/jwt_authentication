@@ -9,9 +9,6 @@ module JwtAuthentication
       private :generate_authentication_token
       private :token_suitable?
       private :token_generator
-
-      mattr_accessor :jwt_timeout
-      mattr_accessor :jwt_timeout_remember_me
     end
 
     def ensure_authentication_token
@@ -40,7 +37,7 @@ module JwtAuthentication
     end
 
     def jwt_token(remember = false)
-      data = self.class.instance_variable_get("@jwt_key_fields").inject({}) { |hash, field| hash[field] = self.send field; hash }
+      data = self.class.jwt_key_fields.inject({}) { |hash, field| hash[field] = self.send field; hash }
       payload = {
           exp: (Time.now + jwt_session_duration(remember)).to_i,
           self.class.name.underscore => data
@@ -55,9 +52,21 @@ module JwtAuthentication
     module ClassMethods
       def acts_as_jwt_authenticatable(options = {})
         before_save :ensure_authentication_token
-        self.jwt_timeout_remember_me = options[:timeout_remember_me] || JwtAuthentication.jwt_timeout_remember_me
-        self.jwt_timeout = options[:timeout] || JwtAuthentication.jwt_timeout
-        self.instance_variable_set("@jwt_key_fields", options[:key_fields] || JwtAuthentication.key_fields)
+        @jwt_timeout_remember_me = options[:timeout_remember_me] || JwtAuthentication.jwt_timeout_remember_me
+        @jwt_timeout = options[:timeout] || JwtAuthentication.jwt_timeout
+        @jwt_key_fields = options[:key_fields] || JwtAuthentication.key_fields
+      end
+
+      def jwt_timeout
+        self.instance_variable_get("@jwt_timeout")
+      end
+
+      def jwt_timeout_remember_me
+        self.instance_variable_get("@jwt_timeout_remember_me")
+      end
+
+      def jwt_key_fields
+        self.instance_variable_get("@jwt_key_fields")
       end
     end
   end
