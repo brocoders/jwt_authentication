@@ -6,6 +6,7 @@ module JwtAuthentication
       included do
         skip_before_filter :verify_authenticity_token  # to avoid Devise check anti forgery token
         before_filter :allow_params_authentication!
+        before_filter :set_request_format!
       end
 
       def render_resource_or_errors(resource, options = {})
@@ -21,6 +22,10 @@ module JwtAuthentication
       end
 
       def require_no_authentication
+      end
+
+      def set_request_format!
+        request.format = :json
       end
     end
   end

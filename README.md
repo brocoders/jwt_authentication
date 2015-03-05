@@ -222,3 +222,6 @@ devise_for :users, module: :jwt_authentication
 ...
 
 ```
+_Note: request format will be set to `:json` by before filter `:set_request_format!`, that is plugged to each inherited devise controller.
+It is necessary for process action if `warder.authenticate!` falls. It will render view for sessions creating by default, 
+by in our case, we need json response :unauthorized_  
