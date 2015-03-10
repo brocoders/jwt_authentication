@@ -10,6 +10,10 @@ class JwtAuthentication::ConfirmationsController < Devise::ConfirmationsControll
   def show
     self.resource = resource_class.confirm_by_token(params[:confirmation_token])
     yield resource if block_given?
-    render json: { status: json_status(resource.errors.empty?) }
+    if resource.errors.empty?
+      render json: { auth_token: resource.jwt_token }
+    else
+      render json: { errors: resource.errors }
+    end
   end
 end

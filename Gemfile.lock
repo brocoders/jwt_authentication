@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    jwt_authentication (0.0.2)
+    jwt_authentication (0.0.4)
       actionmailer (>= 3.2.6, < 5)
       actionpack (>= 3.2.6, < 5)
       devise (~> 3.2)
