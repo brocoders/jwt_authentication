@@ -13,12 +13,12 @@ module JwtAuthentication
         if resource.errors.empty?
           render options.merge({ json: { resource: resource } })
         else
-          render json: { errors: resource.errors }, status: :unprocessable_entity
+          render_errors resource.errors
         end
       end
 
       def json_status(bool)
-        bool ? :ok : :error
+        bool ? :ok : :unprocessable_entity
       end
 
       def require_no_authentication
@@ -26,6 +26,11 @@ module JwtAuthentication
 
       def set_request_format!
         request.format = :json
+      end
+
+      def render_errors(errors)
+        status = json_status !JwtAuthentication.status_error_in_response
+        render json: { errors: errors }, status: status
       end
     end
   end

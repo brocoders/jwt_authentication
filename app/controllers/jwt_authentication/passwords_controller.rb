@@ -5,9 +5,9 @@ class JwtAuthentication::PasswordsController < Devise::PasswordsController
     self.resource = resource_class.send_reset_password_instructions(resource_params)
     yield resource if block_given?
     if resource.errors.empty?
-      render json: { status: :ok }
+      render nothing: true, status: json_status(true)
     else
-      render json: { errors: resource.errors }
+      render_errors resource.errors
     end
   end
 
@@ -19,7 +19,7 @@ class JwtAuthentication::PasswordsController < Devise::PasswordsController
       sign_in(resource_name, resource)
       render json: { auth_token: resource.jwt_token }
     else
-      render json: { errors: resource.errors }
+      render_errors resource.errors
     end
   end
 end

@@ -4,7 +4,7 @@ class JwtAuthentication::ConfirmationsController < Devise::ConfirmationsControll
   def create
     self.resource = resource_class.send_confirmation_instructions(resource_params)
     yield resource if block_given?
-    render json: { status: json_status(true) }
+    render nothing: true, status: json_status(true)
   end
 
   def show
@@ -13,7 +13,7 @@ class JwtAuthentication::ConfirmationsController < Devise::ConfirmationsControll
     if resource.errors.empty?
       render json: { auth_token: resource.jwt_token }
     else
-      render json: { errors: resource.errors }
+      render_errors resource.errors
     end
   end
 end

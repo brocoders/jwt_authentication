@@ -34,6 +34,6 @@ class JwtAuthentication::RegistrationsController < Devise::RegistrationsControll
     resource.destroy
     Devise.sign_out_all_scopes ? sign_out : sign_out(resource_name)
     yield resource if block_given?
-    render json: { status: json_status(resource.destroyed?) }
+    render nothing: true, status: json_status(resource.destroyed?)
   end
 end

@@ -13,7 +13,7 @@ class JwtAuthentication::SessionsController < Devise::SessionsController
       Devise.sign_out_all_scopes ? sign_out : sign_out(resource_name)
       yield if block_given?
     end
-    render json: { status: json_status(true) }
+    render nothing: true, status: json_status(true)
   end
 
   def destroy_all

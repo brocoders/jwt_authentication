@@ -10,6 +10,7 @@ module JwtAuthentication
     mattr_accessor :jwt_timeout
     mattr_accessor :jwt_timeout_remember_me
     mattr_accessor :key_fields
+    mattr_accessor :status_error_in_response
 
     @@controller_adapters = ['rails', 'rails_api']
     @@model_adapters = ['active_record', 'mongoid']
@@ -25,6 +26,7 @@ module JwtAuthentication
                        param_name: 'user_token',
                        sign_in: :devise}}
     @@key_fields = [:email]
+    @@status_error_in_response = false
 
     def configure
       yield self if block_given?
