@@ -43,7 +43,7 @@ module JwtAuthentication
         (options[:models] || JwtAuthentication.models).each do |model, params|
           entity = entities_manager.find_or_create_entity(model)
           define_jwt_authentication_helpers_for(entity)
-          sign_in_method = options[:sign_in] || :devise
+          sign_in_method = params[:sign_in] || :devise
           define_sign_in_method(entity, sign_in_method)
         end
         define_common_helpers(options)
