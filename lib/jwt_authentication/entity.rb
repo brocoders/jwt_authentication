@@ -25,14 +25,26 @@ module JwtAuthentication
       controller.jwt_models[name_underscore.to_sym][:param_name] || "#{name_underscore}_token"
     end
 
-    def get_token_from_params_or_headers(controller)
-      (controller.request.headers[token_header_name(controller)] || controller.params[token_param_name(controller)]).to_s
+    def token_cookie_name(controller)
+      controller.jwt_models[name_underscore.to_sym][:cookie_name]
+    end
+
+    def cookie_enabled?(controller)
+      token_cookie_name(controller).present?
+    end
+
+    def get_token_from_cookie(controller)
+      cookie_enabled?(controller) ? controller.send(:cookies).signed[token_cookie_name(controller)] : nil
+    end
+
+    def get_token(controller)
+      (get_token_from_cookie(controller) || controller.request.headers[token_header_name(controller)] || controller.params[token_param_name(controller)]).to_s
     end
 
     def get_entity(controller)
       begin
-        token = get_token_from_params_or_headers controller
-        payload = JWT.decode(token, nil, false)[0]        # get payload; decode can riase: JWT::DecodeError
+        token = get_token controller
+        payload = JWT.decode(token, nil, false)[0]        # get payload; decode can raise: JWT::DecodeError
         keys = model.jwt_key_fields.inject({}) do |hash, field|
           hash[field] = payload[name_underscore][field.to_s]
           hash

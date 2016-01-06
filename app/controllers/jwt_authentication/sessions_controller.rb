@@ -5,7 +5,10 @@ class JwtAuthentication::SessionsController < Devise::SessionsController
     self.resource = warden.authenticate!({ scope: resource_name, recall: "#{controller_path}#new", store: false })
     sign_in(resource_name, resource)
     yield resource if block_given?
-    render json: { auth_token: resource.jwt_token(sign_in_params[:remember_me]) }
+
+    token, expires = resource.jwt_token_and_expires(sign_in_params[:remember_me])
+    send(:"set_jwt_cookie_for_#{resource_name}", token, expires)
+    render json: { auth_token: token }
   end
 
   def destroy
