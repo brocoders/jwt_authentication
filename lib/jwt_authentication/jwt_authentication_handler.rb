@@ -15,6 +15,8 @@ module JwtAuthentication
       private :authenticate_entity_by_jwt!
       private :sign_in_handler
       private :raise_error!
+      private :set_jwt_to_cookie
+
     end
 
     def authenticate_entity_by_jwt!(entity)
@@ -31,6 +33,17 @@ module JwtAuthentication
 
     def raise_error!
       raise JwtAuthentication::NotAuthenticated.new('Not authenticated')
+    end
+
+    def set_jwt_to_cookie(entity, token, expires)
+      return unless entity.cookie_enabled? self
+
+      cookie_name = entity.token_cookie_name(self)
+      if JwtAuthentication.jwt_timeout_verify
+        cookies.signed[cookie_name] = {value: token, expires: expires}
+      else
+        cookies.permanent.signed[cookie_name] = token
+      end
     end
 
     def valid_entity_name?(entity)
@@ -94,6 +107,12 @@ module JwtAuthentication
           define_method "jwt_authenticate_#{entity.name_underscore}!".to_sym do
             lambda do |_entity|
               raise_error! unless authenticate_entity_by_jwt!(_entity)
+            end.call(entity)
+          end
+
+          define_method "set_jwt_cookie_for_#{entity.name_underscore}".to_sym do |token, expires|
+            lambda do |_entity|
+              set_jwt_to_cookie(_entity, token, expires)
             end.call(entity)
           end
         end

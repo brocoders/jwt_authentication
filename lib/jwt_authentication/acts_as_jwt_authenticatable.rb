@@ -9,6 +9,7 @@ module JwtAuthentication
       private :generate_authentication_token
       private :token_suitable?
       private :token_generator
+      private :token_expires_and_data
     end
 
     def ensure_authentication_token
@@ -36,13 +37,21 @@ module JwtAuthentication
       @token_generator ||= TokenGenerator.new
     end
 
-    def jwt_token(remember = false)
+    def token_expires_and_data(remember = false)
       data = self.class.jwt_key_fields.inject({}) { |hash, field| hash[field] = self.send field; hash }
-      payload = {
-          exp: (Time.now + jwt_session_duration(remember)).to_i,
-          self.class.name.underscore => data
-      }
-      JWT.encode(payload, self.authentication_token)
+
+      [Time.now + jwt_session_duration(remember), data]
+    end
+
+    def jwt_token_and_expires(remember = false)
+      expires, data = token_expires_and_data(remember)
+      payload = {exp: expires.to_i, self.class.name.underscore => data}
+
+      [JWT.encode(payload, self.authentication_token), expires]
+    end
+
+    def jwt_token(remember = false)
+      jwt_token_and_expires(remember).first
     end
 
     def jwt_session_duration(remember = false)

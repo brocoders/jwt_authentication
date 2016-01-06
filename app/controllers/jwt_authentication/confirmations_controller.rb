@@ -11,7 +11,9 @@ class JwtAuthentication::ConfirmationsController < Devise::ConfirmationsControll
     self.resource = resource_class.confirm_by_token(params[:confirmation_token])
     yield resource if block_given?
     if resource.errors.empty?
-      render json: { auth_token: resource.jwt_token }
+      token, expires = resource.jwt_token_and_expires
+      send(:"set_jwt_cookie_for_#{resource_name}", token, expires)
+      render json: { auth_token: token }
     else
       render_errors resource.errors
     end

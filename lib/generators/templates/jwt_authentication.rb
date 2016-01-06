@@ -4,11 +4,13 @@ JwtAuthentication.configure do |config|
   # # Note: specified model should have `authentication_token` attribute (Model should "act as jwt authenticatable")
   # # header_name - name of header to search auth_token in request
   # # param_name - name of parameters to search auth_token in request
+  # # cookie_name - name of cookie to search auth_token in request
   # # sign_in - method to be executed if authentication success, possible values: :devise, :simplified
   # #           if :devise selected, devises method sign_in() will be called at success authentication,
   # #           if :simplified selected, instance variable with name of resource will be set (@user or @terminal)
   # config.models = {user: {header_name: 'X-User-Token',
   #                         param_name: 'user_token',
+  # #                       cookie_name: 'user_token',
   #                         sign_in: :devise}}
   #
   # # Configure mark of jwt timeout verification

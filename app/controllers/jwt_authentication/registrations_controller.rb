@@ -8,8 +8,10 @@ class JwtAuthentication::RegistrationsController < Devise::RegistrationsControll
     if resource_saved
       if resource.active_for_authentication?
         sign_in(resource_name, resource, store: false)
+        token, expires = resource.jwt_token_and_expires
+        send(:"set_jwt_cookie_for_#{resource_name}", token, expires)
         render json: {
-            auth_token: resource.jwt_token,
+            auth_token: token,
             resource_name => resource
         }
         return
