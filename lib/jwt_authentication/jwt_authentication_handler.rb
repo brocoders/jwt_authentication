@@ -40,10 +40,17 @@ module JwtAuthentication
 
       cookie_name = entity.token_cookie_name(self)
       if JwtAuthentication.jwt_timeout_verify
-        cookies.signed[cookie_name] = {value: token, expires: expires}
+        cookies[cookie_name] = {value: token, expires: expires}
       else
-        cookies.permanent.signed[cookie_name] = token
+        cookies.permanent[cookie_name] = token
       end
+    end
+
+    def destroy_jwt_cookie(entity)
+      return unless entity.cookie_enabled? self
+
+      cookie_name = entity.token_cookie_name(self)
+      cookies[cookie_name] = nil
     end
 
     def valid_entity_name?(entity)
@@ -113,6 +120,12 @@ module JwtAuthentication
           define_method "set_jwt_cookie_for_#{entity.name_underscore}".to_sym do |token, expires|
             lambda do |_entity|
               set_jwt_to_cookie(_entity, token, expires)
+            end.call(entity)
+          end
+
+          define_method "destroy_jwt_cookie_for_#{entity.name_underscore}".to_sym do
+            lambda do |_entity|
+              destroy_jwt_cookie(_entity)
             end.call(entity)
           end
         end

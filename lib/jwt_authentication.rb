@@ -2,6 +2,7 @@ require 'jwt_authentication/acts_as_jwt_authenticatable'
 require 'jwt_authentication/acts_as_jwt_authentication_handler'
 require 'jwt_authentication/configuration'
 require 'jwt_authentication/engine'
+require 'jwt_authentication/devise'
 require 'jwt'
 
 module JwtAuthentication

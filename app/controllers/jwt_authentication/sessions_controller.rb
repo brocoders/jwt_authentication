@@ -8,7 +8,7 @@ class JwtAuthentication::SessionsController < Devise::SessionsController
 
     token, expires = resource.jwt_token_and_expires(sign_in_params[:remember_me])
     send(:"set_jwt_cookie_for_#{resource_name}", token, expires)
-    render json: { auth_token: token }
+    render json: { auth_token: token, resource: resource }
   end
 
   def destroy
@@ -16,6 +16,8 @@ class JwtAuthentication::SessionsController < Devise::SessionsController
       Devise.sign_out_all_scopes ? sign_out : sign_out(resource_name)
       yield if block_given?
     end
+    send(:"destroy_jwt_cookie_for_#{resource_name}")
+
     render nothing: true, status: json_status(true)
   end
 

@@ -34,7 +34,7 @@ module JwtAuthentication
     end
 
     def get_token_from_cookie(controller)
-      cookie_enabled?(controller) ? controller.send(:cookies).signed[token_cookie_name(controller)] : nil
+      cookie_enabled?(controller) ? controller.send(:cookies)[token_cookie_name(controller)] : nil
     end
 
     def get_token(controller)
