@@ -19,7 +19,7 @@ class JwtAuthentication::PasswordsController < Devise::PasswordsController
       sign_in(resource_name, resource)
       token, expires = resource.jwt_token_and_expires
       send(:"set_jwt_cookie_for_#{resource_name}", token, expires)
-      render json: { auth_token: token }
+      render json: { auth_token: token, resource: resource }
     else
       render_errors resource.errors
     end
