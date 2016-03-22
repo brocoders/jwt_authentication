@@ -42,8 +42,8 @@ module JwtAuthentication
     end
 
     def get_entity(controller)
-      begin
-        token = get_token controller
+      token = get_token controller
+      if token.present?
         payload = JWT.decode(token, nil, false)[0]        # get payload; decode can raise: JWT::DecodeError
         keys = model.jwt_key_fields.inject({}) do |hash, field|
           hash[field] = payload[name_underscore][field.to_s]
@@ -53,9 +53,11 @@ module JwtAuthentication
         record = find_entity_by_keys(keys)
         JWT.decode(token, record.authentication_token, true, verify_expiration: JwtAuthentication.jwt_timeout_verify, leeway: JwtAuthentication.jwt_timeout_leeway)
         record
-      rescue
-        nil
       end
+    rescue
+      controller.send(:response).headers["x-remove-#{name_underscore}-token"] = 'yes'
+      controller.send(:cookies).delete(token_cookie_name(controller)) if cookie_enabled?(controller)
+      nil
     end
 
     def find_entity_by_keys(keys)
