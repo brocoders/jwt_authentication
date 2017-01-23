@@ -109,7 +109,7 @@ Atfer controller was extended with jwt_authentication helpers, you may authentic
 
 ```ruby
 class TerminalsController < ActionController
-  acts_as_jwt_authentication_handler models: {terminal: {sign_in: :simlified}}
+  acts_as_jwt_authentication_handler models: {terminal: {sign_in: :simplified}}
   before_filter :jwt_authenticate_terminal!
 
   def show
